@@ -70,7 +70,7 @@ If you encounter any issues, please submit an issue on github.
 
 ---
 
-Credits:
+## Credits
 
 - [Magisk](https://github.com/topjohnwu/magisk): For magiskboot
 
