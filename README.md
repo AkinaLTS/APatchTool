@@ -8,7 +8,7 @@ A script automating the process of patching the kernel with [KernelPatch](https:
 
 - User-specified image path or get from current Android device.  
 - User-specified KernelPatch version. Or default, latest release.  
-- User-specified SuperKey. [What is SuperKey?](https://apatch.top/faq.html#what-is-superkey)
+- User-specified SuperKey. [What is SuperKey?](https://apatch.dev/faq.html#what-is-superkey)
 - Supports directly install.
 - Supports OTA updates.
 - Supports embedding KPMs.
