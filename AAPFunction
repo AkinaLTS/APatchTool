@@ -2,180 +2,177 @@
 #rewrited
 #shellcheck disable=SC2086
 get_device_boot() {
-    msg_info "Getting boot image..."
-    if [ -z "${BOOTPATH}" ]; then
-        if [ -n "${BOOTSUFFIX}" ]; then
-            msg_info "Current boot slot: ${BOOTSUFFIX}"
-        else
-            msg_info "Current boot slot: A-Only,no slot."
-        fi
-        dd if=${BYNAMEPATH}/boot${BOOTSUFFIX} of=${WORKDIR}/boot${BOOTSUFFIX}.img || EXITSTATUS=$?
-        if [ $EXITSTATUS != 0 ]; then
-            msg_fatal "Get boot image from device failed!"
-            exit 1
-        fi
+  msg_info "Getting boot image..."
+  if [ -z "${BOOTPATH}" ]; then
+    if [ -n "${BOOTSUFFIX}" ]; then
+      msg_info "Current boot slot: ${BOOTSUFFIX}"
     else
-        msg_info "Now copying boot image to workdir..."
-        cp ${BOOTPATH} "${WORKDIR}/boot${BOOTSUFFIX}.img"
+      msg_info "Current boot slot: A-Only,no slot."
     fi
-    msg_info "Done."
+    dd if=${BYNAMEPATH}/boot${BOOTSUFFIX} of=${WORKDIR}/boot${BOOTSUFFIX}.img || EXITSTATUS=$? # Dump boot image from device
+    if [ $EXITSTATUS != 0 ]; then
+      msg_fatal "Get boot image from device failed!"
+      exit 1
+    fi
+  else
+    msg_info "Now copying boot image to workdir..."
+    cp ${BOOTPATH} "${WORKDIR}/boot${BOOTSUFFIX}.img" # Copy specified boot image to working directory
+  fi
+  msg_info "Done."
 }
 get_tools() {
-    cd "${WORKDIR}" || exit 1
-    if [ "${DOWNFILES}" == "true" ]; then
-        msg_info "Downloading kptools-${OS}..."
-        if [ -n "${KPTOOLVER}" ]; then
-            msg_info "Use the specified version: ${KPTOOLVER}"
-        else
-            msg_info "Use the latest kptools."
-        fi
-        if [ -n "${KPTOOLVER}" ]; then
-            curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/download/${KPTOOLVER}/kptools-${OS}"
-            EXITSTATUS=$?
-        else
-            curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/latest/download/kptools-${OS}"
-            EXITSTATUS=$?
-        fi
-        if [ $EXITSTATUS != 0 ]; then
-            msg_fatal "Download failed."
-            msg_fatal "Please check your internet connection."
-            exit 1
-        fi
-        chmod +x kptools-${OS}
-        msg_info "Done."
-        msg_info "Downloading kpimg-android..."
-        if [ -n "${KPTOOLVER}" ]; then
-            curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/download/${KPTOOLVER}/kpimg-android"
-            EXITSTATUS=$?
-        else
-            curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/latest/download/kpimg-android"
-            EXITSTATUS=$?
-        fi
-        if [ $EXITSTATUS != 0 ]; then
-            msg_fatal "Download failed."
-            msg_fatal "Please check your internet connection."
-            exit 1
-        fi
-        msg_info "Done."
-        msg_info "Downloading magiskboot..."
-        curl -LO --progress-bar "https://raw.githubusercontent.com/AkinaAcct/APatchTool/main/bin/magiskboot"
-        EXITSTATUS=$?
-        if [ $EXITSTATUS != 0 ]; then
-            msg_fatal "Download failed."
-            msg_fatal "Please check your internet connection."
-            exit 1
-        fi
-        chmod +x magiskboot
-        msg_info "Done."
+  cd "${WORKDIR}" || exit 1
+  if [ "${DOWNFILES}" == "true" ]; then
+    msg_info "Downloading kptools-${OS}..."
+    if [ -n "${KPTOOLVER}" ]; then
+      msg_info "Use the specified version: ${KPTOOLVER}"
     else
-        for i in magiskboot kptools-${OS} kpimg-android; do
-            chmod +x ${WORKDIR}/${i}
-        done
+      msg_info "Use the latest kptools."
     fi
+    if [ -n "${KPTOOLVER}" ]; then
+      curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/download/${KPTOOLVER}/kptools-${OS}" # Download specified version of kptools
+      EXITSTATUS=$?
+    else
+      curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/latest/download/kptools-${OS}" # Download latest version of kptools
+      EXITSTATUS=$?
+    fi
+    if [ $EXITSTATUS != 0 ]; then
+      msg_fatal "Download failed."
+      msg_fatal "Please check your internet connection."
+      exit 1
+    fi
+    chmod +x kptools-${OS} # Make kptools executable
+    msg_info "Done."
+    msg_info "Downloading kpimg-android..."
+    if [ -n "${KPTOOLVER}" ]; then
+      curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/download/${KPTOOLVER}/kpimg-android" # Download specified version of kpimg-android
+      EXITSTATUS=$?
+    else
+      curl -LO --progress-bar "https://github.com/bmax121/KernelPatch/releases/latest/download/kpimg-android" # Download latest version of kpimg-android
+      EXITSTATUS=$?
+    fi
+    if [ $EXITSTATUS != 0 ]; then
+      msg_fatal "Download failed."
+      msg_fatal "Please check your internet connection."
+      exit 1
+    fi
+    msg_info "Done."
+    msg_info "Downloading magiskboot..."
+    curl -LO --progress-bar "https://raw.githubusercontent.com/AkinaAcct/APatchTool/main/bin/magiskboot" # Download magiskboot
+    EXITSTATUS=$?
+    if [ $EXITSTATUS != 0 ]; then
+      msg_fatal "Download failed."
+      msg_fatal "Please check your internet connection."
+      exit 1
+    fi
+    chmod +x magiskboot # Make magiskboot executable
+    msg_info "Done."
+  else
+    for i in magiskboot kptools-${OS} kpimg-android; do
+      chmod +x ${WORKDIR}/${i} # Make tools executable in the specified working directory
+    done
+  fi
 }
 analyze_kpms_path() {
-    unset KPMP # Reset array KPMP
-    while [[ ${TKPM} != "done" ]]; do
-        msg_info "Now enter your KPMs' path(Enter \"done\" to finish this operation): "
-        read -r -a TKPM
-        if [[ ! -f "$(realpath ${TKPM})" ]]; then
-            msg_err "No such file!"
-        else
-            KPMP+=($(realpath ${TKPM}))
-        fi
-        msg_info "Current seleted KPMs: ${KPMP[*]}"
-        msg_info "Total: ${#KPMP[@]}"
-    done
-    for i in "${KPMP[@]}"; do
-        EXTRAARGS+=" --embed-extra-path=$i --extra-type=kpm"
-    done
-    msg_info "Current EXTRAARGS: ${EXTRAARGS}"
+  unset KPMP # Reset array KPMP
+  while [[ ${TKPM} != "done" ]]; do
+    msg_info "Now enter your KPMs' path(Enter \"done\" to finish this operation): "
+    read -r -a TKPM # Read KPM paths into array TKPM
+    if [[ ! -f "$(realpath ${TKPM})" ]]; then
+      msg_err "No such file!"
+    else
+      KPMP+=($(realpath ${TKPM})) # Add real path of KPM to array KPMP
+    fi
+    msg_info "Current seleted KPMs: ${KPMP[*]}"
+    msg_info "Total: ${#KPMP[@]}"
+  done
+  for i in "${KPMP[@]}"; do
+    EXTRAARGS+=" --embed-extra-path=$i --extra-type=kpm" # Append KPM paths to EXTRAARGS for kptools
+  done
+  msg_info "Current EXTRAARGS: ${EXTRAARGS}"
 }
 patch_boot() {
-    if [ "${EMBEDKPMS}" = "true" ]; then
-        analyze_kpms_path
-    fi
-    msg_info "Unpacking image..."
-    ./magiskboot unpack boot${BOOTSUFFIX}.img
-    EXITSTATUS=$?
-    if [ $EXITSTATUS != 0 ]; then
-        msg_fatal "Unpack failed. Submit a issue with a screenshot of here on github if you are sure that this is not your fault."
-        exit 1
-    fi
+  if [ "${EMBEDKPMS}" = "true" ]; then
+    analyze_kpms_path
+  fi
+  msg_info "Unpacking image..."
+  ./magiskboot unpack boot${BOOTSUFFIX}.img # Unpack the boot image
+  EXITSTATUS=$?
+  if [ $EXITSTATUS != 0 ]; then
+    msg_fatal "Unpack failed. Submit a issue with a screenshot of here on github if you are sure that this is not your fault."
+    exit 1
+  fi
+  msg_info "Done."
+  msg_info "Unpatching current image..."
+  ./kptools-${OS} --unpatch --image kernel --out kernel || EXITSTATUS=$? # Unpatch the kernel if it was previously patched
+  if [ ${EXITSTATUS} != 0 ]; then
+    msg_warn "Unpatch failed. Maybe you are using a unpatched boot image?"
+    msg_warn "Now skipping unpatching..."
+  else
     msg_info "Done."
-    msg_info "Unpatching current image..."
-    ./kptools-${OS} --unpatch --image kernel --out kernel || EXITSTATUS=$?
-    if [ ${EXITSTATUS} != 0 ]; then
-        msg_warn "Unpatch failed. Maybe you are using a unpatched boot image?"
-        msg_warn "Now skipping unpatching..."
-    else
-        msg_info "Done."
-    fi
-    msg_info "Patching image...Current Superkey: ${SUPERKEY}"
-    ./kptools-${OS} --patch --kpimg kpimg-android --skey "${SUPERKEY}" --image kernel --out kernel ${EXTRAARGS}
-    EXITSTATUS=$?
-    if [ ${EXITSTATUS} != 0 ]; then
-        msg_fatal "Patch failed. Submit a issue with a screenshot of here on github if you are sure that this is not your fault."
-        exit 1
-    fi
-    msg_info "Done."
-    msg_info "Repacking..."
-    ./magiskboot repack boot${BOOTSUFFIX}.img
-    EXITSTATUS=$?
-    if [ $EXITSTATUS != 0 ]; then
-        msg_fatal "Repack failed. Submit a issue with a screenshot of here on github if you are sure that this is not your fault."
-        exit 1
-    fi
-    msg_info "Done. Finished paching."
+  fi
+  msg_info "Patching image...Current Superkey: ${SUPERKEY}"
+  ./kptools-${OS} --patch --kpimg kpimg-android --skey "${SUPERKEY}" --image kernel --out kernel ${EXTRAARGS} # Patch the kernel with kpimg and superkey
+  EXITSTATUS=$?
+  if [ ${EXITSTATUS} != 0 ]; then
+    msg_fatal "Patch failed. Submit a issue with a screenshot of here on github if you are sure that this is not your fault."
+    exit 1
+  fi
+  msg_info "Done."
+  msg_info "Repacking..."
+  ./magiskboot repack boot${BOOTSUFFIX}.img # Repack the boot image
+  EXITSTATUS=$?
+  if [ $EXITSTATUS != 0 ]; then
+    msg_fatal "Repack failed. Submit a issue with a screenshot of here on github if you are sure that this is not your fault."
+    exit 1
+  fi
+  msg_info "Done. Finished paching."
 }
 
 flash_boot() {
-    if [ "${OS}" = "android" ]; then
-        if ${ROOT}; then
-            msg_info "Flashing boot image..."
-            if [ -n "${TBOOTSUFFIX}" ]; then
-                msg_warn "You previously specified that you want to install to another slot. Target slot:${TBOOTSUFFIX}."
-                BOOTSUFFIX=${TBOOTSUFFIX}
-            fi
-            dd if=${WORKDIR}/new-boot.img of=${BYNAMEPATH}/boot${BOOTSUFFIX}
-            EXITSTATUS=$?
-            if [ ${EXITSTATUS} != 0 ]; then
-                msg_err "Flash to slot ${BOOTSUFFIX} failed."
-                msg_fatal "Now trying to restore..."
-                dd if=${WORKDIR}/boot${BOOTSUFFIX}.img of=${BYNAMEPATH}/boot${BOOTSUFFIX}
-                EXITSTATUS=$?
-                if [ ${EXITSTATUS} != 0 ]; then
-                    msg_fatal "Restore failed."
-                    msg_fatal "Even I can't help you now. You can try to restore boot manually."
-                    exit 1
-                fi
-                msg_info "Restore Sucessfully."
-            fi
-            msg_info "Flash done."
-            msg_info "Cleaning temporary files..."
-            rm -rf ${WORKDIR}
-            msg_info "Done."
-        else
-            msg_fatal "No root. Unable to continue. Aborted."
-            exit 1
+  if [ "${OS}" = "android" ]; then
+    if ${ROOT}; then
+      msg_info "Flashing boot image..."
+      if [ -n "${TBOOTSUFFIX}" ]; then
+        msg_warn "You previously specified that you want to install to another slot. Target slot:${TBOOTSUFFIX}."
+        BOOTSUFFIX=${TBOOTSUFFIX}
+      fi
+      dd if=${WORKDIR}/new-boot.img of=${BYNAMEPATH}/boot${BOOTSUFFIX} # Flash the new boot image to the specified slot
+      EXITSTATUS=$?
+      if [ ${EXITSTATUS} != 0 ]; then
+        msg_err "Flash to slot ${BOOTSUFFIX} failed."
+        msg_fatal "Now trying to restore..."
+        dd if=${WORKDIR}/boot${BOOTSUFFIX}.img of=${BYNAMEPATH}/boot${BOOTSUFFIX} # Restore the original boot image
+        EXITSTATUS=$?
+        if [ ${EXITSTATUS} != 0 ]; then
+          msg_fatal "Restore failed."
+          msg_fatal "Even I can't help you now. You can try to restore boot manually."
+          exit 1
         fi
+        msg_info "Restore Sucessfully."
+      fi
+      msg_info "Flash done."
+      msg_info "Cleaning temporary files..."
+      rm -rf ${WORKDIR} # Remove temporary working directory
+      msg_info "Done."
     else
-        msg_fatal "You are trying to change this script. Linux does not require a flashing step. This is the second level of warning."
-        exit 1
+      msg_fatal "No root. Unable to continue. Aborted."
+      exit 1
     fi
+  else
+    msg_fatal "You are trying to change this script. Linux does not require a flashing step. This is the second level of warning."
+    exit 1
+  fi
 }
 
 print_superkey() {
-    cat <<EOF
+  cat <<EOF
 ####################################
 
-
-    YOUR SUPERKEY IS "$(printf "${BLUE}%s${RESET}" "${SUPERKEY}")"
-
-    DON'T FORGET IT!!
-
+YOUR SUPERKEY IS "$(printf "${BLUE}%s${RESET}" "${SUPERKEY}")"
+DON'T FORGET IT!!
 
 ####################################
 EOF
-    exit 0
+  exit 0
 }
