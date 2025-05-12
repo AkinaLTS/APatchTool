@@ -56,13 +56,16 @@ Usage:
 ./AAP.sh -h
 ```
 
----
+## Reporting Bugs
 
 If you have issues or need feedback, please run `AAP.sh` in debug mode. To enable debug mode, run:
 
 ```sh
-APTOOLDEBUG=1 ./AAP.sh [ARGS]
+APTOOLDEBUG=1 ./AAP.sh [ARGS] | tee AAP_Log_$(date +"%Y-%m-%d_%H:%M:%S").txt
 ```
+
+Logs will be stored in AAP_Log_\[date]_\[time].txt  
+Create an issue on github, and upload it as the log.
 
 ---
 
